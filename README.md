@@ -19,5 +19,5 @@ You can now deploy the Valtix gateways to secure the applications in this VPC.  
 https://prod1-dashboard.vtxsecurityservices.com
 
 ## Resulting diagram
-<img src="https://raw.githubusercontent.com/valtix-security/valtixlabs-aws/master/ValtixLabs-AWS.png">
+<img src="https://raw.githubusercontent.com/valtix-security/valtixlabs-aws/master/ValtixLabs-AWS.PNG">
 
