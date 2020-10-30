@@ -16,7 +16,7 @@ In order to connect to the App instances from the Bastion instance, create the S
 
 ### Deploy Valtix gateways
 You can now deploy the Valtix gateways to secure the applications in this VPC.  Please refer to the following tutorial here for reference:
-https://prod1-dashboard.vtxsecurityservices.com
+https://prod1-dashboard.vtxsecurityservices.com/static/docs/
 
 ## Resulting diagram
 <img src="https://raw.githubusercontent.com/valtix-security/valtixlabs-aws/master/ValtixLabs-AWS.PNG">
