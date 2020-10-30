@@ -1,0 +1,384 @@
+AWSTemplateFormatVersion: 2010-09-09
+# This CloudFormation template deploys a basic VPC / Network. 
+Description:  This template deploys a VPC, with a pair of public and private subnets spread
+  across two Availability Zones. It deploys an internet gateway, with a default
+  route on the public subnets and private subnets to start.  The AppInstances have internet access 
+  to start in order to install Apache to start a webserver.  It is expected that the user will 
+  remove the default route from the private subnets after initial setup. 
+
+Parameters:
+  KeyName:
+      Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+      Type: AWS::EC2::KeyPair::KeyName
+      ConstraintDescription: must be the name of an existing EC2 KeyPair
+
+  InstanceType:
+    Description: WebServer EC2 instance type
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+    - t1.micro
+    - t2.nano
+    - t2.micro
+    - t2.small
+    - t2.medium
+    ConstraintDescription: must be a valid EC2 instance type
+
+  SSHLocation:
+    Description: The IP address range that can be used to SSH to the EC2 instances
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 0.0.0.0/0
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x
+
+  EnvironmentName:
+    Description: An environment name that is prefixed to resource names
+    Type: String
+
+  VpcCIDR:
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+    Default: 10.2.0.0/16
+
+  PublicSubnet1CIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the first Availability Zone
+    Type: String
+    Default: 10.2.10.0/24
+
+  PublicSubnet2CIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the second Availability Zone
+    Type: String
+    Default: 10.2.11.0/24
+
+  PrivateSubnet1CIDR:
+    Description: Please enter the IP range (CIDR notation) for the private subnet in the first Availability Zone
+    Type: String
+    Default: 10.2.20.0/24
+
+  PrivateSubnet2CIDR:
+    Description: Please enter the IP range (CIDR notation) for the private subnet in the second Availability Zone
+    Type: String
+    Default: 10.2.21.0/24
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-vpc'
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref EnvironmentName
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !Ref PublicSubnet1CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Public Subnet (AZ1)
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
+      CidrBlock: !Ref PublicSubnet2CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Public Subnet (AZ2)
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs  '' ]
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Private Subnet (AZ1)
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Private Subnet (AZ2)
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Public Routes
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Private Routes (AZ1)
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet1
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Private Routes (AZ2)
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet2
+
+  DefaultPrivateRoute1:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  
+  DefaultPrivateRoute2:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  BastionInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType:
+        Ref: InstanceType
+      SecurityGroupIds:
+      - Ref: BastionSecurityGroup
+      KeyName:
+        Ref: KeyName
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-Bastion'
+      SubnetId:
+        Ref: PublicSubnet1
+      ImageId:
+        !FindInMap [RegionMap, !Ref "AWS::Region", ubuntu1804]    
+      UserData:
+        Fn::Base64: !Sub |
+          #! /bin/bash
+          apt-get update
+          apt-get upgrade -y
+
+  ApplicationInstance1:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType:
+        Ref: InstanceType
+      SecurityGroupIds:
+      - Ref: AppSecurityGroup
+      KeyName:
+        Ref: KeyName
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-App-Az1'
+        - Key: Env
+          Value: 'App'
+      SubnetId: 
+        Ref: PrivateSubnet1
+      ImageId:
+        !FindInMap [RegionMap, !Ref "AWS::Region", ubuntu1804]    
+      UserData:
+        Fn::Base64: !Sub |
+          #! /bin/bash
+          apt-get update
+          apt-get upgrade -y
+          apt-get install -y apache2
+          cat <<EOF > /var/www/html/index.html
+          <html><body><h1>Hello World</h1>
+          <p>This page was created from a startup script.</p>
+          </body></html>
+          EOF
+
+  ApplicationInstance2:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType:
+        Ref: InstanceType
+      SecurityGroupIds:
+      - Ref: AppSecurityGroup
+      KeyName:
+        Ref: KeyName
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-App-Az2'
+        - Key: Env
+          Value: 'App'
+      SubnetId: 
+        Ref: PrivateSubnet2
+      ImageId:
+        !FindInMap [RegionMap, !Ref "AWS::Region", ubuntu1804]    
+      UserData:
+        Fn::Base64: !Sub |
+          #! /bin/bash
+          apt-get update
+          apt-get upgrade -y
+          apt-get install -y apache2
+          cat <<EOF > /var/www/html/index.html
+          <html><body><h1>Hello World</h1>
+          <p>This page was created from a startup script.</p>
+          </body></html>
+          EOF
+  
+  BastionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: allow ssh from ssh location
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp:
+          Ref: SSHLocation
+      VpcId: 
+        Ref: VPC
+
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow port ssh http https from anywhere
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp: '0.0.0.0/0'
+      - IpProtocol: tcp
+        FromPort: '80'
+        ToPort: '80'
+        CidrIp: '0.0.0.0/0'        
+      - IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        CidrIp: '0.0.0.0/0'    
+      VpcId: 
+        Ref: VPC
+          
+Mappings:
+  RegionMap:
+    ca-central-1:
+      ubuntu1804: ami-0e625dfca3e5a33bd
+    eu-central-1:
+      ubuntu1804: ami-0e1ce3e0deb8896d2
+    eu-north-1:
+      ubuntu1804: ami-01996625fff6b8fcc
+    eu-south-1:
+      ubuntu1804: ami-0e82abf811ef58145
+    eu-west-1:
+      ubuntu1804: ami-0dc8d444ee2a42d8a
+    eu-west-2:
+      ubuntu1804: ami-0e169fa5b2b2f88ae
+    eu-west-3:
+      ubuntu1804: ami-089d839e690b09b28
+    us-east-1:
+      ubuntu1804: ami-00ddb0e5626798373
+    us-east-2:
+      ubuntu1804: ami-0dd9f0e7df0f0a138
+    us-west-1:
+      ubuntu1804: ami-0a741b782c2c8632d
+    us-west-2:
+      ubuntu1804: ami-0ac73f33a1888c64a
+
+Outputs:
+  VPC:
+    Description: A reference to the created VPC
+    Value: !Ref VPC
+
+  PublicSubnets:
+    Description: A list of the public subnets
+    Value: !Join [ ",", [ !Ref PublicSubnet1, !Ref PublicSubnet2 ]]
+
+  PrivateSubnets:
+    Description: A list of the private subnets
+    Value: !Join [ ",", [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ]]
+
+  PublicSubnet1:
+    Description: A reference to the public subnet in the 1st Availability Zone
+    Value: !Ref PublicSubnet1
+
+  PublicSubnet2:
+    Description: A reference to the public subnet in the 2nd Availability Zone
+    Value: !Ref PublicSubnet2
+
+  PrivateSubnet1:
+    Description: A reference to the private subnet in the 1st Availability Zone
+    Value: !Ref PrivateSubnet1
+
+  PrivateSubnet2:
+    Description: A reference to the private subnet in the 2nd Availability Zone
+    Value: !Ref PrivateSubnet2
+
+  BastionPublicIp:
+    Description: 'Bastion Public IP'
+    Value: !GetAtt BastionInstance.PublicIp
+
+  Application1PrivateIp:
+    Description: 'Application Private IP'
+    Value: !GetAtt ApplicationInstance1.PrivateIp
+
+  Application2PrivateIp:
+    Description: 'Application Private IP'
+    Value: !GetAtt ApplicationInstance2.PrivateIp
