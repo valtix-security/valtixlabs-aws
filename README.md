@@ -12,7 +12,11 @@ This AWS CloudFormation template creates a demo environment for use with Valtix 
 
 ## How to use:
 Download the quickstart.yml template file and open CloudFormation in AWS console and upload the file and deploy the stack<br>
-In order to connect to the App instances from the Bastion instance, create the SSH private key for your keypair to the Bastion instance.  
+In order to connect to the App instances from the Bastion instance:
+1. create the SSH private key in ~/.ssh/id_rsa
+1. paste the contents of the private key you selected for the keypair in the CFT
+1. chmod 400 ~/.ssh/id_rsa   
+1. ssh <ipaddress of app ec2 instance>
 
 ### Deploy Valtix gateways
 You can now deploy the Valtix gateways to secure the applications in this VPC.  Please refer to the following tutorial here for reference:
