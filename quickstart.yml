@@ -128,7 +128,7 @@ Conditions:
     UseUbuntu1804AMI:
         Fn::Equals:
             - Ref: AppAMI
-            - "ubuntu-1804"
+            - "ubuntu1804"
     CreateValtixResources:
         Fn::Equals:
             - Ref: ValtixResources
