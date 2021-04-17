@@ -66,7 +66,7 @@ Parameters:
         Description: Availability Zone 2
         Type: AWS::EC2::AvailabilityZone::Name
     AppAMI:
-        Description: AMI to use (valtix-default is Centos 7 image with docker and sample hello world app in us-east-1,2 and us-west-1,2. Use ubuntu-1804 to install Ubuntu 18.04 with sample hello world app.  For other regions provide an AMI). Set to blank if you don't want to create App EC2 instance
+        Description: AMI to use (valtix-default is Centos 7 image with docker and sample hello world app in us-east-1,2 and us-west-1,2. Use ubuntu1804 to install Ubuntu 18.04 with sample hello world app.  For other regions provide an AMI). Set to blank if you don't want to create App EC2 instance
         Type: String
         Default: valtix-default
     KeyPairName:
